@@ -99,7 +99,7 @@ leftHandName = "arm_left_7_link"
 wHandTranslation = 100
 wHandRotation = 0
 wHandVelocity = 10
-wHandCollision = 100000
+wHandCollision = 10000
 wStateReg = 0.1
 wControlReg = 0.001
 wLimit = 1e3
@@ -110,8 +110,8 @@ wDCM = 0
 
 weightArmPos = [10,10, 10,10]  # [z, x, z, y, z, x, y]
 weightArmVel = [10, 10, 10, 10]  # [z, x, z, y, z, x, y]
-weightTorsoPos = [10,10]  # [z, y]
-weightTorsoVel = [10,1]  # [z, y]
+weightTorsoPos = [10,1000]  # [z, y]
+weightTorsoVel = [10,0]  # [z, y]
 stateWeights = np.array(
 	weightTorsoPos
 	+ weightArmPos

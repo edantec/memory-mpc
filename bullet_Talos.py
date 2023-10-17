@@ -14,7 +14,7 @@ from scipy.spatial.transform import Rotation as R
 # import os
 
 class BulletTalos:
-    def __init__(self, conf, rmodelComplete):
+    def __init__(self, conf, rmodelComplete, FixedBase = False):
         p.connect(p.GUI)  # Start the client for PyBullet
         p.setTimeStep(conf.simu_step)
         p.setGravity(*conf.gravity.tolist())  # Set gravity (disabled by default)
@@ -28,7 +28,7 @@ class BulletTalos:
             conf.URDF_FILENAME,
             robotStartPosition,
             robotStartOrientation,
-            useFixedBase=False,
+            useFixedBase=FixedBase,
         )
 
         # Load horizontal plane
@@ -160,6 +160,20 @@ class BulletTalos:
         q[:3] -= rotation.as_matrix() @ self.localInertiaPos
         return q, v
     
+    def measureReducedState(self):
+        jointStates = p.getJointStates(
+            self.robotId, self.bulletControlledJoints
+        )  # State of controlled joints
+
+        # Joint vector for Pinocchio
+        q = np.array(
+                [jointStates[i_joint][0] for i_joint in range(len(jointStates))]
+        )
+        v = np.array(
+                [jointStates[i_joint][1] for i_joint in range(len(jointStates))]
+        )
+        return q, v
+
     def addTable(self, path, position):
         p.setAdditionalSearchPath(path)
         self.tableId = p.loadURDF("table/table.urdf")
