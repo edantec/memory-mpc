@@ -5,7 +5,7 @@ import example_robot_data
 import numpy as np
 import configuration_reduced as conf
 
-from work import Problem, sampleRange
+from problem_formulation import Problem, sampleRange
 import time
 import torch
 from bullet_Talos import BulletTalos
@@ -14,6 +14,8 @@ import os
 
 sys.path.append(os.getcwd() + '/learn_dataset')
 from neural_network import nn_model
+
+# ####### LOAD COMPLETE ROBOT FOR BULLET  ############
 
 URDF_FILENAME = "talos_reduced.urdf"
 SRDF_FILENAME = "talos.srdf"
@@ -25,13 +27,7 @@ rmodelFreeFlyer, geomModelFreeFlyer, visualModelFreeFlyer = pin.buildModelsFromU
 pin.loadReferenceConfigurations(rmodelFreeFlyer,modelPath + SRDF_SUBPATH, False)
 q0FreeFlyer = rmodelFreeFlyer.referenceConfigurations["half_sitting"]
 
-# coding: utf8
-
-import numpy as np
-import pybullet as pyb
-
-# ####### CONFIGURATION  ############
-# ### OCP
+# ####### OCP  ############
 
 ocp = Problem(conf)
 #ocp.ddp.setCallbacks([crocoddyl.CallbackVerbose()])
@@ -52,7 +48,6 @@ model = nn_model(nq + 3,64, state_size * T_horizon)
 model.load_state_dict(torch.load('learn_dataset/nn_model/reduced_nn_obstacle2'))
 
 # Sample target position
-
 x_goals = np.array([0.6,0.9])
 y_goals = np.array([0.0,0.6])
 z_goals = np.array([0.8,1.2])
@@ -65,34 +60,44 @@ iterations_nowarmstart = []
 target_x = []
 target_y = []
 
+# Choose random target to reach
 targetSample = np.array([0.8, 0.4, 1.1])
-xs_init = [x0 for i in range(conf.T + 1)]
-us_init = [ocp.ddp.problem.runningModels[0].quasiStatic(ocp.ddp.problem.runningDatas[0], x0) for i in range(conf.T)]
+#targetSample = sampleRange(target_ranges)
 ocp.updateTarget(targetSample)
+
+# Retrieve warm-start from neural network
 nn_input = torch.tensor(np.concatenate((targetSample,x0[:nq])), dtype=torch.float32)
 trajs = model(nn_input)
 trajs = trajs.reshape(1,T_horizon,state_size)[0]
 trajs = trajs.detach().cpu().numpy()
 
+# Solve without warm-start
+xs_init = [x0 for i in range(conf.T + 1)]
+us_init = [ocp.ddp.problem.runningModels[0].quasiStatic(ocp.ddp.problem.runningDatas[0], x0) for i in range(conf.T)]
+
 ocp.ddp.solve(xs_init, us_init, 100, True)
 xs1 = ocp.ddp.xs[:]
 
+print(f"Solve without warmstart takes {ocp.ddp.iter} iterations")
+
+# Solve with warm-start
 xinit_hpp = list(np.concatenate((x0.reshape(1,12),trajs)))
 uinit_hpp = [ocp.ddp.problem.runningModels[0].quasiStatic(ocp.ddp.problem.runningDatas[0], xinit_hpp[i]) for i in range(conf.T)]
 ocp.ddp.solve(xinit_hpp, uinit_hpp, 100, True)
 xs2 = ocp.ddp.xs[:]
+
 print(f"Solve with warmstart takes {ocp.ddp.iter} iterations")
+
 test_number = 1
 for i in range(test_number):
 	print(f"Sample {i}")
-	# Solve without warmstart
-	#ocp.solveDDP(xSample, targetSample, 100)
-	#iterations_nowarmstart.append(ocp.ddp.iter)
 	device.showHandToTrack(targetSample,[0,1,0,1])
+	# Display trajectory without warm start
 	for t in range(conf.T):
 		time.sleep(0.01)
 		device.resetReducedState(xs1[t][:6]) 
 		device.set_capsule(capsule_pose)
+	# Display trajectory with warm start
 	for t in range(conf.T):
 		time.sleep(0.01)
 		device.resetReducedState(xs2[t][:6]) 

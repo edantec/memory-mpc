@@ -6,7 +6,6 @@ from hpp import Transform
 from hpp.corbaserver.manipulation import ConstraintGraph, ProblemSolver, newProblem, Constraints
 from hpp.gepetto.manipulation import ViewerFactory
 from hpp.corbaserver.manipulation.robot import HumanoidRobot
-import pickle
 
 class Box(object):
     handles = ["handle1", "handle2", "handle3", "handle4"]

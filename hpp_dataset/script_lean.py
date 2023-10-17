@@ -211,7 +211,8 @@ ps.createRelativeComConstraint(
 
 
 # Constraints that are applied to all states
-commonStateConstraints = Constraints(numConstraints = footPlacement + ["com_talos"] +\
+# Adding CoM constraint results in the problem being overconstrained
+commonStateConstraints = Constraints(numConstraints = footPlacement + #["com_talos"] +\
                                         talosLockedJoint +\
                                         [boxPlace,])
 # Constraints that are applied to all transitions
